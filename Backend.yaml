@@ -1,0 +1,113 @@
+
+  PrivateSubnets:
+    Type: String
+    AllowedValues:
+    - True
+    - False
+    Default: True
+    Description: Do you want to create private subnets in addition to public subnets?
+  
+
+
+  BuildPrivateSubnets: !Equals [ !Ref PrivateSubnets, True ]
+  BuildPrivateA:       !Equals [ !Ref PrivateSubnets, True ]
+  BuildPrivateB:       !And [ !Not [ !Equals [ !Ref NumberOfAZs,1 ] ],!Equals [ !Ref PrivateSubnets,True ] ]
+  BuildPrivateC:       !And [ !Not [ !Equals [ !Ref NumberOfAZs,2]], !And [!Not [ !Equals [ !Ref NumberOfAZs,1]], !Equals [ !Ref PrivateSubnets, True]]]
+  BuildPrivateD:       !And [ !Equals [ !Ref NumberOfAZs,4], !Equals [ !Ref PrivateSubnets, True]]
+
+
+#Creates private Subnet based on parameters and conditions
+  PrivateSubnetA:
+    Type: AWS::EC2::Subnet
+    Condition: BuildPrivateA
+    Properties:
+      VpcId: !Ref Production
+      CidrBlock: 10.0.10.0/24
+      AvailabilityZone: !Select [ 0, !GetAZs ] 
+
+  PrivateSubnetB:
+    Type: AWS::EC2::Subnet
+    Condition: BuildPrivateB
+    Properties:
+      VpcId: !Ref Production
+      CidrBlock: 10.0.11.0/24
+      AvailabilityZone: !Select [ 1, !GetAZs ] 
+
+  PrivateSubnetC:
+    Type: AWS::EC2::Subnet
+    Condition: BuildPrivateC
+    Properties:
+      VpcId: !Ref Production
+      CidrBlock: 10.0.12.0/24
+      AvailabilityZone: !Select [ 2, !GetAZs ] 
+
+  PrivateSubnetD:
+    Type: AWS::EC2::Subnet
+    Condition: BuildPrivateD
+    Properties:
+      VpcId: !Ref Production
+      CidrBlock: 10.0.13.0/24
+      AvailabilityZone: !Select [ 3, !GetAZs ] 
+
+
+
+  # Here is a private route table with attachment to a NAT gateway
+  PrivateRouteTable:
+    Type: AWS::EC2::RouteTable
+    Condition: BuildPrivateSubnets
+    Properties:
+      VpcId: !Ref Production
+
+  
+  PrivateRoute:
+    Type: AWS::EC2::Route
+    Condition: BuildPrivateSubnets
+    Properties:
+      RouteTableId: !Ref PrivateRouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      NatGatewayId: !Ref NATGateway
+
+ # A NAT Gateway:
+  NATGateway:
+    Type: AWS::EC2::NatGateway
+    Condition: BuildPrivateSubnets
+    Properties:
+      AllocationId: !GetAtt ElasticIPAddress.AllocationId
+      SubnetId: !Ref PublicSubnetA
+
+  ElasticIPAddress:
+    Type: AWS::EC2::EIP
+    Condition: BuildPrivateSubnets
+    Properties:
+      Domain: VPC
+
+
+
+ # Attach the private subnets to private route tables:   
+  PrivateSubnetARouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Condition: BuildPrivateA
+    Properties:
+      SubnetId: !Ref PrivateSubnetA
+      RouteTableId: !Ref PrivateRouteTable
+
+  PrivateSubnetBRouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Condition: BuildPrivateB
+    Properties:
+      SubnetId: !Ref PrivateSubnetB
+      RouteTableId: !Ref PrivateRouteTable
+
+  PrivateSubnetCRouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Condition: BuildPrivateC
+    Properties:
+      SubnetId: !Ref PrivateSubnetC
+      RouteTableId: !Ref PrivateRouteTable
+
+  PrivateSubnetDRouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Condition: BuildPrivateD
+    Properties:
+      SubnetId: !Ref PrivateSubnetD
+      RouteTableId: !Ref PrivateRouteTable

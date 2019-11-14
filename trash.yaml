@@ -1,0 +1,20 @@
+  AmountOfLoadBalancers:
+    Type: Number
+    AllowedValues:
+    - 1
+    - 2
+    Default: 1
+    Description: How Many Load Balancers do you need?
+
+  PublicSubnetALBB:
+    Type: AWS::EC2::Subnet
+    Condition: BuildPublicALBB
+    Properties:
+      VpcId: !Ref Production
+      CidrBlock: 10.0.6.0/24
+      AvailabilityZone: !Select [ 1, !GetAZs ]
+
+  BuildPublicALBB: !Equals [!Ref AmountOfLoadBalancers, 2]
+
+
+      
