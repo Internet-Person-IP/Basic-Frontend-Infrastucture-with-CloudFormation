@@ -1,3 +1,8 @@
-3-Tier_Architechture.yaml
-Backend.yaml
-trash.yaml
+# Ignore everything
+*
+
+# But not these files...
+!ASG_And_ALB.yaml
+
+# ...even if they are in subdirectories
+!*/
